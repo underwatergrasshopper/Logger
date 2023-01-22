@@ -53,7 +53,7 @@ public:
     virtual ~Logger();
 
     // Opens/Closes logging to file.
-    void OpenFile(const std::string& file_name);
+    void OpenFile(const std::string& file_name, bool is_append);
     void CloseFile();
     bool IsFileOpened() const;
 
@@ -145,9 +145,11 @@ inline Logger::~Logger() {
 
 //------------------------------------------------------------------------------
 
-inline void Logger::OpenFile(const std::string& file_name) {
+inline void Logger::OpenFile(const std::string& file_name, bool is_append) {
     CloseFile();
-    fopen_s(&m_file, file_name.c_str(), "wt, ccs=UTF-8");
+    if (fopen_s(&m_file, file_name.c_str(), is_append ? "at" : "wt") != 0 || !m_file) {
+        InnerFatalError("Logger: Can not open log file.");
+    }
 }
 
 inline void Logger::CloseFile() {
@@ -195,8 +197,12 @@ inline void Logger::Disable(LoggerOption option) {
 //------------------------------------------------------------------------------
 
 inline void Logger::LogText(const std::string& text) {
+    
     if (m_file) {
         fprintf(m_file, "%s", text.c_str());
+        if (errno != 0) {
+            InnerFatalError("Logger: Can not open log file.");
+        }
         fflush(m_file);
     }
     if (m_is_stdout) {
