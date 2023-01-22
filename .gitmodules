@@ -1,3 +1,6 @@
 [submodule "Logger_Test/externals/TrivialTestKit"]
 	path = Logger_Test/externals/TrivialTestKit
 	url = https://github.com/underwatergrasshopper/TrivialTestKit.git
+[submodule "Logger_Test/externals/ToStr"]
+	path = Logger_Test/externals/ToStr
+	url = https://github.com/underwatergrasshopper/ToStr.git
