@@ -26,5 +26,7 @@
     <None Include="Pack.bat" />
     <None Include="Test.bat" />
     <None Include=".gitignore" />
+    <None Include=".github\workflows\build_and_test.yml" />
+    <None Include=".github\workflows\build_and_test_mingw.yml" />
   </ItemGroup>
 </Project>
