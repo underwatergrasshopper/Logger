@@ -146,7 +146,7 @@ inline Logger::~Logger() {
 
 inline void Logger::OpenFile(const std::string& file_name) {
     CloseFile();
-    fopen_s(&m_file, file_name.c_str(), "w");
+    fopen_s(&m_file, file_name.c_str(), "wt, ccs=UTF-8");
 }
 
 inline void Logger::CloseFile() {
