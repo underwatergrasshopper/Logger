@@ -20,7 +20,6 @@ jobs:
         platform: [x86, x64]
         configuration: [Release, Debug]
         test_flag: [""]
-        executable: ["ToStr_Test.exe"]
         include:
           - os: windows-2019
             toolset: v142
