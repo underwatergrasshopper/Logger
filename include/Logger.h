@@ -79,6 +79,7 @@ public:
     template <typename... Types>
     void LogText(const std::string& format, Types&&... arguments);
 
+    // Traces execution of function.
     template <typename... Types>
     void LogTrace(const std::string& function_name, const std::string& format, Types&&... arguments);
 
@@ -266,18 +267,7 @@ inline void Logger::LogTime() {
     tm ti = {};
     localtime_s(&ti, &now);
 
-    if (m_file) {
-        fprintf(m_file, "[%d/%02d/%02d %02d:%02d:%02d]", 1900 + ti.tm_year, 1 + ti.tm_mon, ti.tm_mday, ti.tm_hour, ti.tm_min, ti.tm_sec);
-        fflush(m_file);
-    }
-    if (m_is_stdout) {
-        if (fwide(stdout, 0) > 0) {
-            wprintf(L"[%d/%02d/%02d %02d:%02d:%02d]", 1900 + ti.tm_year, 1 + ti.tm_mon, ti.tm_mday, ti.tm_hour, ti.tm_min, ti.tm_sec);
-        } else {
-            printf("[%d/%02d/%02d %02d:%02d:%02d]", 1900 + ti.tm_year, 1 + ti.tm_mon, ti.tm_mday, ti.tm_hour, ti.tm_min, ti.tm_sec);
-        }
-        fflush(stdout);
-    }
+    LogText("[%d/%02d/%02d %02d:%02d:%02d]", 1900 + ti.tm_year, 1 + ti.tm_mon, ti.tm_mday, ti.tm_hour, ti.tm_min, ti.tm_sec);
 }
 
 inline void Logger::InnerFatalError(const char* message) {
