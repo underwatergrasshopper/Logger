@@ -31,5 +31,302 @@
 #ifndef LOGGER_H_
 #define LOGGER_H_
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <time.h>
+
+#include <utility>
+
+//------------------------------------------------------------------------------
+// Declaration
+//------------------------------------------------------------------------------
+
+enum LoggerOption {
+    LOGGER_OPTION_LOG_TIME
+};
+
+class Logger {
+public:
+    typedef void (*DoAtFatalErrorFnP_T)(const char* message);
+
+    Logger();
+    virtual ~Logger();
+
+    // Opens/Closes logging to file.
+    void OpenFile(const std::string& file_name);
+    void CloseFile();
+    bool IsFileOpened() const;
+
+    // Opens/Closes logging to standard output.
+    void OpenStdOut();
+    void CloseStdOut();
+    bool IsStdOutOpened() const;
+
+    void SetDoAtFatalError(DoAtFatalErrorFnP_T do_at_fatal_error);
+
+    // Enables/Disables:
+    //      LOGGER_OPTION_LOG_TIME - logging with timestamps.
+    void Enable(LoggerOption option);
+    void Disable(LoggerOption option);
+
+    // for all Log{...}() methods:
+    // format           Format of log message, same rules as in standard 'printf' function.
+    // arguments        Arguments interpreted by format, same rules as in standard 'printf' function.
+    // function_name    Name of the function or method where Log{...}() is called.
+
+    void LogText(const std::string& text);
+
+    template <typename... Types>
+    void LogText(const std::string& format, Types&&... arguments);
+
+    template <typename... Types>
+    void LogTrace(const std::string& function_name, const std::string& format, Types&&... arguments);
+
+    template <typename... Types>
+    void LogDump(const std::string& format, Types&&... arguments);
+
+    template <typename... Types>
+    void LogEvent(const std::string& format, Types&&... arguments);
+
+    template <typename... Types>
+    void LogWarning(const std::string& format, Types&&... arguments);
+
+    template <typename... Types>
+    void LogError(const std::string& format, Types&&... arguments);
+
+    template <typename... Types>
+    void LogFatalError(const std::string& format, Types&&... arguments);
+
+    // Tracks entering and exiting from scope: '{', '}'. 
+    // To do so, macro LOGGER_TRACK must be called on beginning of the scope.
+    class Tracker {
+    public:
+        Tracker(Logger& logger, const char* function_name);
+        virtual ~Tracker();
+    private:
+        Logger& m_logger;
+        const char* m_function_name;
+    };
+private:
+    template <typename... Types>
+    void LogEntry(const std::string& category_name, const std::string& format, Types&&... arguments);
+
+    void LogTime();
+
+    void InnerFatalError(const char* message);
+
+    template <typename... Types>
+    std::string GenerateMessage(const std::string& format, Types&&... arguments);
+
+    FILE*                   m_file;
+    bool                    m_is_stdout;
+    DoAtFatalErrorFnP_T     m_do_at_fatal_error;
+    bool                    m_is_log_time;
+};
+
+#define LOGGER_TRACE(logger, ...) logger.LogTrace(__PRETTY_FUNCTION__ , __VA_ARGS__)
+#define LOGGER_TRACK(logger) Logger::Tracker l_tracker(logger, __PRETTY_FUNCTION__)
+
+//------------------------------------------------------------------------------
+// Definition
+//------------------------------------------------------------------------------
+
+inline Logger::Logger() {
+    m_file              = nullptr;
+    m_is_stdout         = false;
+    m_do_at_fatal_error = nullptr;
+    m_is_log_time       = false;
+}
+
+inline Logger::~Logger() {
+    CloseFile();
+}
+
+//------------------------------------------------------------------------------
+
+inline void Logger::OpenFile(const std::string& file_name) {
+    CloseFile();
+    fopen_s(&m_file, file_name.c_str(), "w");
+}
+
+inline void Logger::CloseFile() {
+    if (m_file) {
+        fclose(m_file);
+        m_file = nullptr;
+    }
+}
+
+inline bool Logger::IsFileOpened() const { 
+    return m_file != nullptr; 
+}
+
+inline void Logger::OpenStdOut() {
+    m_is_stdout = true;
+}
+
+inline void Logger::CloseStdOut() {
+    m_is_stdout = false;
+}
+
+inline bool Logger::IsStdOutOpened() const { 
+    return m_is_stdout; 
+}
+
+//------------------------------------------------------------------------------
+
+inline void Logger::SetDoAtFatalError(DoAtFatalErrorFnP_T do_at_fatal_error) { 
+    m_do_at_fatal_error = do_at_fatal_error; 
+}
+
+//------------------------------------------------------------------------------
+
+inline void Logger::Enable(LoggerOption option) {
+    switch (option) {
+    case LOGGER_OPTION_LOG_TIME: m_is_log_time = true; break;
+    }
+}
+inline void Logger::Disable(LoggerOption option) {
+    switch (option) {
+    case LOGGER_OPTION_LOG_TIME: m_is_log_time = false; break;
+    }
+}
+
+//------------------------------------------------------------------------------
+
+inline void Logger::LogText(const std::string& text) {
+    if (m_file) {
+        fprintf(m_file, "%s", text.c_str());
+        fflush(m_file);
+    }
+    if (m_is_stdout) {
+        if (fwide(stdout, 0) > 0) {
+            wprintf(L"%hs", text.c_str());
+        } else {
+            printf("%s", text.c_str());
+        }
+        fflush(stdout);
+    }
+}
+
+template <typename... Types>
+void Logger::LogText(const std::string& format, Types&&... arguments) {
+    LogText(GenerateMessage(format, std::forward<Types>(arguments)...));
+}
+
+template <typename... Types>
+void Logger::LogTrace(const std::string& function_name, const std::string& format, Types&&... arguments) {
+    if (m_is_log_time) LogTime();
+    LogText("[Trace][%s]: ", function_name.c_str());
+    LogText(format, std::forward<Types>(arguments)...);
+    LogText("\n");
+}
+template <typename... Types>
+void Logger::LogDump(const std::string& format, Types&&... arguments) {
+    LogEntry("Dump", format, std::forward<Types>(arguments)...);
+} 
+
+template <typename... Types>
+void Logger::LogEvent(const std::string& format, Types&&... arguments) {
+    LogEntry("Event", format, std::forward<Types>(arguments)...);
+} 
+
+template <typename... Types>
+void Logger::LogWarning(const std::string& format, Types&&... arguments) {
+    LogEntry("Warning", format, std::forward<Types>(arguments)...);
+} 
+
+template <typename... Types>
+void Logger::LogError(const std::string& format, Types&&... arguments) {
+    LogEntry("Error", format, std::forward<Types>(arguments)...);
+} 
+
+template <typename... Types>
+void Logger::LogFatalError(const std::string& format, Types&&... arguments) {
+    if (m_is_log_time) LogTime();
+    LogText("[Fatal Error]: ");
+    const std::string message = GenerateMessage(format, std::forward<Types>(arguments)...);
+    LogText(message);
+    LogText("\n");
+
+    if (m_do_at_fatal_error) m_do_at_fatal_error(message.c_str()); 
+}
+
+template <typename... Types>
+void Logger::LogEntry(const std::string& category_name, const std::string& format, Types&&... arguments) {
+    if (m_is_log_time) LogTime();
+    LogText("[%s]: ", category_name.c_str());
+    LogText(format, std::forward<Types>(arguments)...);
+    LogText("\n");
+} 
+
+//------------------------------------------------------------------------------
+
+inline void Logger::LogTime() {
+    const time_t now = time(NULL);
+    tm ti = {};
+    localtime_s(&ti, &now);
+
+    if (m_file) {
+        fprintf(m_file, "[%d/%02d/%02d %02d:%02d:%02d]", 1900 + ti.tm_year, 1 + ti.tm_mon, ti.tm_mday, ti.tm_hour, ti.tm_min, ti.tm_sec);
+        fflush(m_file);
+    }
+    if (m_is_stdout) {
+        if (fwide(stdout, 0) > 0) {
+            wprintf(L"[%d/%02d/%02d %02d:%02d:%02d]", 1900 + ti.tm_year, 1 + ti.tm_mon, ti.tm_mday, ti.tm_hour, ti.tm_min, ti.tm_sec);
+        } else {
+            printf("[%d/%02d/%02d %02d:%02d:%02d]", 1900 + ti.tm_year, 1 + ti.tm_mon, ti.tm_mday, ti.tm_hour, ti.tm_min, ti.tm_sec);
+        }
+        fflush(stdout);
+    }
+}
+
+inline void Logger::InnerFatalError(const char* message) {
+    LogText(message);
+    if (m_do_at_fatal_error) m_do_at_fatal_error(message);
+    exit(EXIT_FAILURE);
+}
+
+template <typename... Types>
+std::string Logger::GenerateMessage(const std::string& format, Types&&... arguments) {
+    std::string message;
+
+    enum { SIZE = 4096 };
+    char stack_buffer[SIZE];
+
+    int count = snprintf(stack_buffer, SIZE, format.c_str(), std::forward<Types>(arguments)...);
+    if (count < 0) {
+        InnerFatalError("[Inner Fatal Error][Logger::LogText]: Wrong encoding.");
+    }
+
+    if (count >= SIZE) {
+        char* buffer = new char[count];
+
+        int second_count = snprintf(buffer, count, format.c_str(), std::forward<Types>(arguments)...);
+        if (count < 0) {
+            InnerFatalError("[Inner Fatal Error][Logger::LogText]: Wrong encoding (at second try).");
+        }
+        if (second_count > count) {
+            InnerFatalError("[Inner Fatal Error][Logger::LogText]: Can not write to buffer.");
+        }
+
+        message = std::string(buffer);
+
+        delete[] buffer;
+    } else {
+        message = std::string(stack_buffer);
+    }
+
+    return message;
+}
+
+//------------------------------------------------------------------------------
+
+inline Logger::Tracker::Tracker(Logger& logger, const char* funcName) : m_logger(logger), m_function_name(funcName) {
+    logger.LogTrace(funcName, "Enter.");
+}
+
+inline Logger::Tracker::~Tracker() {
+    m_logger.LogTrace(m_function_name, "Exit.");
+}
 
 #endif // LOGGER_H_
