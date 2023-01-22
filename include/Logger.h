@@ -283,7 +283,7 @@ std::string Logger::GenerateMessage(const std::string& format, Types&&... argume
     enum { SIZE = 4096 };
     char stack_buffer[SIZE];
 
-    int count = snprintf(stack_buffer, SIZE, format.c_str(), std::forward<Types>(arguments)...);
+    const int count = snprintf(stack_buffer, SIZE, format.c_str(), std::forward<Types>(arguments)...);
     if (count < 0) {
         InnerFatalError("[Inner Fatal Error][Logger::LogText]: Wrong encoding.");
     }
@@ -291,7 +291,7 @@ std::string Logger::GenerateMessage(const std::string& format, Types&&... argume
     if (count >= SIZE) {
         char* buffer = new char[count];
 
-        int second_count = snprintf(buffer, count, format.c_str(), std::forward<Types>(arguments)...);
+        const int second_count = snprintf(buffer, count, format.c_str(), std::forward<Types>(arguments)...);
         if (count < 0) {
             InnerFatalError("[Inner Fatal Error][Logger::LogText]: Wrong encoding (at second try).");
         }
@@ -299,11 +299,11 @@ std::string Logger::GenerateMessage(const std::string& format, Types&&... argume
             InnerFatalError("[Inner Fatal Error][Logger::LogText]: Can not write to buffer.");
         }
 
-        message = std::string(buffer);
+        message = std::string(buffer, second_count);
 
         delete[] buffer;
     } else {
-        message = std::string(stack_buffer);
+        message = std::string(stack_buffer, count);
     }
 
     return message;
