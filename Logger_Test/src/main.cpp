@@ -152,6 +152,9 @@ void TestLoggerLog() {
 
         logger.LogText("Text.\n");
         LOGGER_TRACE(logger, "Trace.");
+        {
+            LOGGER_TRACK(logger);
+        }
         logger.LogDump("Dump.");
         logger.LogEvent("Event.");
         logger.LogWarning("Warning.");
@@ -169,6 +172,8 @@ void TestLoggerLog() {
         const std::string expected_text =
             "Text.\n"
             "[Trace][TestLoggerLog]: Trace.\n"
+            "[Trace][TestLoggerLog]: Enter.\n"
+            "[Trace][TestLoggerLog]: Exit.\n"
             "[Dump]: Dump.\n"
             "[Event]: Event.\n"
             "[Warning]: Warning.\n"
@@ -179,28 +184,6 @@ void TestLoggerLog() {
             "[Event]: Event 4.\n"
             "[Warning]: Warning 5.\n"
             "[Error]: Error 6.\n";
-
-        TTK_ASSERT(IsFileExists(file_name));
-        TTK_ASSERT_M(LoadTextFromFile(file_name) == expected_text, LoadTextFromFile(file_name) + "\n" + expected_text);
-    }
-
-    // tracker
-    {
-        const std::string file_name = "log\\test\\TestLoggerLog_Tracker.txt";
-        DeleteFileA(file_name.c_str());
-
-        Logger logger;
-        logger.OpenFile(file_name, false);
-
-        {
-            LOGGER_TRACK(logger);
-        }
-
-        logger.CloseFile();
-
-        const std::string expected_text =
-            "[Trace][TestLoggerLog]: Enter.\n"
-            "[Trace][TestLoggerLog]: Exit.\n";
 
         TTK_ASSERT(IsFileExists(file_name));
         TTK_ASSERT_M(LoadTextFromFile(file_name) == expected_text, LoadTextFromFile(file_name) + "\n" + expected_text);
@@ -239,7 +222,7 @@ void TestLoggerLog() {
         DeleteFileA(file_name.c_str());
 
         Logger logger;
-        logger.Enable(LOGGER_OPTION_LOG_TIME);
+        logger.Enable(LoggerOption::LOG_TIME);
         logger.OpenFile(file_name, false);
 
         logger.LogText("Text.\n");
@@ -252,6 +235,188 @@ void TestLoggerLog() {
         logger.CloseFile();
 
         // No assert. Just to check by eye in file.
+    }
+
+    // no trace
+    {
+        const std::string file_name = "log\\test\\TestLoggerLog_NoTrace.txt";
+        DeleteFileA(file_name.c_str());
+
+        Logger logger;
+        logger.OpenFile(file_name, false);
+        logger.Disable(LoggerOption::LOG_TRACE);
+
+        logger.LogText("Text.\n");
+        LOGGER_TRACE(logger, "Trace.");
+        {
+            LOGGER_TRACK(logger);
+        }
+        logger.LogDump("Dump.");
+        logger.LogEvent("Event.");
+        logger.LogWarning("Warning.");
+        logger.LogError("Error.");
+
+        logger.LogText("%s %d.\n", "Text", 1);
+        LOGGER_TRACE(logger, "%s %d.", "Trace", 2);
+        logger.LogDump("%s %d.", "Dump", 3);
+        logger.LogEvent("%s %d.", "Event", 4);
+        logger.LogWarning("%s %d.", "Warning", 5);
+        logger.LogError("%s %d.", "Error", 6);
+
+        logger.CloseFile();
+
+        const std::string expected_text =
+            "Text.\n"
+            "[Dump]: Dump.\n"
+            "[Event]: Event.\n"
+            "[Warning]: Warning.\n"
+            "[Error]: Error.\n"
+            "Text 1.\n"
+            "[Dump]: Dump 3.\n"
+            "[Event]: Event 4.\n"
+            "[Warning]: Warning 5.\n"
+            "[Error]: Error 6.\n";
+
+        TTK_ASSERT(IsFileExists(file_name));
+        TTK_ASSERT_M(LoadTextFromFile(file_name) == expected_text, LoadTextFromFile(file_name) + "\n" + expected_text);
+    }
+
+    // no dump
+    {
+        const std::string file_name = "log\\test\\TestLoggerLog_NoDump.txt";
+        DeleteFileA(file_name.c_str());
+
+        Logger logger;
+        logger.OpenFile(file_name, false);
+        logger.Disable(LoggerOption::LOG_DUMP);
+
+        logger.LogText("Text.\n");
+        LOGGER_TRACE(logger, "Trace.");
+        {
+            LOGGER_TRACK(logger);
+        }
+        logger.LogDump("Dump.");
+        logger.LogEvent("Event.");
+        logger.LogWarning("Warning.");
+        logger.LogError("Error.");
+
+        logger.LogText("%s %d.\n", "Text", 1);
+        LOGGER_TRACE(logger, "%s %d.", "Trace", 2);
+        logger.LogDump("%s %d.", "Dump", 3);
+        logger.LogEvent("%s %d.", "Event", 4);
+        logger.LogWarning("%s %d.", "Warning", 5);
+        logger.LogError("%s %d.", "Error", 6);
+
+        logger.CloseFile();
+
+        const std::string expected_text =
+            "Text.\n"
+            "[Trace][TestLoggerLog]: Trace.\n"
+            "[Trace][TestLoggerLog]: Enter.\n"
+            "[Trace][TestLoggerLog]: Exit.\n"
+            "[Event]: Event.\n"
+            "[Warning]: Warning.\n"
+            "[Error]: Error.\n"
+            "Text 1.\n"
+            "[Trace][TestLoggerLog]: Trace 2.\n"
+            "[Event]: Event 4.\n"
+            "[Warning]: Warning 5.\n"
+            "[Error]: Error 6.\n";
+
+        TTK_ASSERT(IsFileExists(file_name));
+        TTK_ASSERT_M(LoadTextFromFile(file_name) == expected_text, LoadTextFromFile(file_name) + "\n" + expected_text);
+    }
+
+    // no event
+    {
+        const std::string file_name = "log\\test\\TestLoggerLog_NoEvent.txt";
+        DeleteFileA(file_name.c_str());
+
+        Logger logger;
+        logger.OpenFile(file_name, false);
+        logger.Disable(LoggerOption::LOG_EVENT);
+
+        logger.LogText("Text.\n");
+        LOGGER_TRACE(logger, "Trace.");
+        {
+            LOGGER_TRACK(logger);
+        }
+        logger.LogDump("Dump.");
+        logger.LogEvent("Event.");
+        logger.LogWarning("Warning.");
+        logger.LogError("Error.");
+
+        logger.LogText("%s %d.\n", "Text", 1);
+        LOGGER_TRACE(logger, "%s %d.", "Trace", 2);
+        logger.LogDump("%s %d.", "Dump", 3);
+        logger.LogEvent("%s %d.", "Event", 4);
+        logger.LogWarning("%s %d.", "Warning", 5);
+        logger.LogError("%s %d.", "Error", 6);
+
+        logger.CloseFile();
+
+        const std::string expected_text =
+            "Text.\n"
+            "[Trace][TestLoggerLog]: Trace.\n"
+            "[Trace][TestLoggerLog]: Enter.\n"
+            "[Trace][TestLoggerLog]: Exit.\n"
+            "[Dump]: Dump.\n"
+            "[Warning]: Warning.\n"
+            "[Error]: Error.\n"
+            "Text 1.\n"
+            "[Trace][TestLoggerLog]: Trace 2.\n"
+            "[Dump]: Dump 3.\n"
+            "[Warning]: Warning 5.\n"
+            "[Error]: Error 6.\n";
+
+        TTK_ASSERT(IsFileExists(file_name));
+        TTK_ASSERT_M(LoadTextFromFile(file_name) == expected_text, LoadTextFromFile(file_name) + "\n" + expected_text);
+    }
+
+    // no warning
+    {
+        const std::string file_name = "log\\test\\TestLoggerLog_NoWarning.txt";
+        DeleteFileA(file_name.c_str());
+
+        Logger logger;
+        logger.OpenFile(file_name, false);
+        logger.Disable(LoggerOption::LOG_WARNING);
+
+        logger.LogText("Text.\n");
+        LOGGER_TRACE(logger, "Trace.");
+        {
+            LOGGER_TRACK(logger);
+        }
+        logger.LogDump("Dump.");
+        logger.LogEvent("Event.");
+        logger.LogWarning("Warning.");
+        logger.LogError("Error.");
+
+        logger.LogText("%s %d.\n", "Text", 1);
+        LOGGER_TRACE(logger, "%s %d.", "Trace", 2);
+        logger.LogDump("%s %d.", "Dump", 3);
+        logger.LogEvent("%s %d.", "Event", 4);
+        logger.LogWarning("%s %d.", "Warning", 5);
+        logger.LogError("%s %d.", "Error", 6);
+
+        logger.CloseFile();
+
+        const std::string expected_text =
+            "Text.\n"
+            "[Trace][TestLoggerLog]: Trace.\n"
+            "[Trace][TestLoggerLog]: Enter.\n"
+            "[Trace][TestLoggerLog]: Exit.\n"
+            "[Dump]: Dump.\n"
+            "[Event]: Event.\n"
+            "[Error]: Error.\n"
+            "Text 1.\n"
+            "[Trace][TestLoggerLog]: Trace 2.\n"
+            "[Dump]: Dump 3.\n"
+            "[Event]: Event 4.\n"
+            "[Error]: Error 6.\n";
+
+        TTK_ASSERT(IsFileExists(file_name));
+        TTK_ASSERT_M(LoadTextFromFile(file_name) == expected_text, LoadTextFromFile(file_name) + "\n" + expected_text);
     }
 }
 

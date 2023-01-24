@@ -41,8 +41,12 @@
 // Declaration
 //------------------------------------------------------------------------------
 
-enum LoggerOption {
-    LOGGER_OPTION_LOG_TIME
+enum class LoggerOption {
+    LOG_TIME,
+    LOG_TRACE,
+    LOG_DUMP,
+    LOG_EVENT,
+    LOG_WARNING
 };
 
 class Logger {
@@ -72,9 +76,14 @@ public:
     void SetDoAtFatalError(DoAtFatalErrorFnP_T do_at_fatal_error);
 
     // Enables/Disables:
-    //      LOGGER_OPTION_LOG_TIME - logging with timestamps.
+    //      LOG_TIME    - logging with timestamps (default: Disabled),
+    //      LOG_TRACE   - logging trace (default: Enabled),
+    //      LOG_DUMP    - logging dump (default: Enabled),
+    //      LOG_EVENT   - logging event (default: Enabled),
+    //      LOG_WARNING - logging warning (default: Enabled).
     void Enable(LoggerOption option);
     void Disable(LoggerOption option);
+    void SetOption(LoggerOption option, bool is);
 
     // for all Log{...}() methods:
     // Expected string encoding: ASCII or UTF8.
@@ -132,7 +141,12 @@ private:
     FILE*                   m_file;
     bool                    m_is_stdout;
     DoAtFatalErrorFnP_T     m_do_at_fatal_error;
+
     bool                    m_is_log_time;
+    bool                    m_is_log_trace;
+    bool                    m_is_log_dump;
+    bool                    m_is_log_event;
+    bool                    m_is_log_warning;
 };
 
 #define LOGGER_TRACE(logger, ...) logger.LogTrace(__FUNCTION__ , __VA_ARGS__)
@@ -146,7 +160,12 @@ inline Logger::Logger() {
     m_file              = nullptr;
     m_is_stdout         = false;
     m_do_at_fatal_error = nullptr;
+
     m_is_log_time       = false;
+    m_is_log_trace      = true;
+    m_is_log_dump       = true;
+    m_is_log_event      = true;
+    m_is_log_warning    = true;
 }
 
 inline Logger::~Logger() {
@@ -194,13 +213,19 @@ inline void Logger::SetDoAtFatalError(DoAtFatalErrorFnP_T do_at_fatal_error) {
 //------------------------------------------------------------------------------
 
 inline void Logger::Enable(LoggerOption option) {
-    switch (option) {
-    case LOGGER_OPTION_LOG_TIME: m_is_log_time = true; break;
-    }
+    SetOption(option, true);
 }
 inline void Logger::Disable(LoggerOption option) {
+    SetOption(option, false);
+}
+
+inline void Logger::SetOption(LoggerOption option, bool is) {
     switch (option) {
-    case LOGGER_OPTION_LOG_TIME: m_is_log_time = false; break;
+        case LoggerOption::LOG_TIME:    m_is_log_time       = is; break;
+        case LoggerOption::LOG_TRACE:   m_is_log_trace      = is; break;
+        case LoggerOption::LOG_DUMP:    m_is_log_dump       = is; break;
+        case LoggerOption::LOG_EVENT:   m_is_log_event      = is; break;
+        case LoggerOption::LOG_WARNING: m_is_log_warning    = is; break;
     }
 }
 
@@ -232,24 +257,26 @@ void Logger::LogText(const std::string& format, Types&&... arguments) {
 
 template <typename... Types>
 void Logger::LogTrace(const std::string& function_name, const std::string& format, Types&&... arguments) {
-    if (m_is_log_time) LogTime();
-    LogText("[Trace][%s]: ", function_name.c_str());
-    LogText(format, std::forward<Types>(arguments)...);
-    LogText("\n");
+    if (m_is_log_trace) {
+        if (m_is_log_time) LogTime();
+        LogText("[Trace][%s]: ", function_name.c_str());
+        LogText(format, std::forward<Types>(arguments)...);
+        LogText("\n");
+    }
 }
 template <typename... Types>
 void Logger::LogDump(const std::string& format, Types&&... arguments) {
-    LogEntry("Dump", format, std::forward<Types>(arguments)...);
+    if (m_is_log_dump) LogEntry("Dump", format, std::forward<Types>(arguments)...);
 } 
 
 template <typename... Types>
 void Logger::LogEvent(const std::string& format, Types&&... arguments) {
-    LogEntry("Event", format, std::forward<Types>(arguments)...);
+    if (m_is_log_event) LogEntry("Event", format, std::forward<Types>(arguments)...);
 } 
 
 template <typename... Types>
 void Logger::LogWarning(const std::string& format, Types&&... arguments) {
-    LogEntry("Warning", format, std::forward<Types>(arguments)...);
+    if (m_is_log_warning) LogEntry("Warning", format, std::forward<Types>(arguments)...);
 } 
 
 template <typename... Types>
