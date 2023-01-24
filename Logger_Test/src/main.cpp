@@ -86,14 +86,14 @@ void TestLoggerOpenFile() {
         DeleteFileUTF8(file_name);
 
         Logger logger;
-        logger.OpenFile_FileNameUTF8(file_name, false);
+        logger.OpenFile(file_name, false);
         logger.LogText(u8"Some text\u0444.\n");
         logger.CloseFile();
 
         TTK_ASSERT(IsFileExists(file_name));
         TTK_ASSERT_M(LoadTextFromFileUTF8(file_name) == u8"Some text\u0444.\n", LoadTextFromFileUTF8(file_name));
 
-        logger.OpenFile_FileNameUTF8(file_name, false);
+        logger.OpenFile(file_name, false);
         logger.LogText(u8"Another text\u0444.\n");
         logger.CloseFile();
 

@@ -53,17 +53,8 @@ public:
     virtual ~Logger();
 
     // Opens log file to be logged in.
-    // file_name            Name of log file. Encoding: ACII.
+    // file_name            Name of log file. Encoding: ACII or UTF8.
     void OpenFile(const std::string& file_name, bool is_append);
-
-    // Opens log file to be logged in. 
-    // file_name            Name of log file. Encoding: ASCII, UTF8.
-    void OpenFile_FileNameUTF8(const std::string& file_name, bool is_append);
-
-    // Opens log file to be logged in. Adds UTF8 BOM to log file.
-    // file_name            Name of log file. Encoding: ACII, UTF8.
-    void OpenFile_UTF8_WithBOM(const std::string& file_name, bool is_append);
-
 
     // Closes log file.
     void CloseFile();
@@ -86,7 +77,7 @@ public:
     void Disable(LoggerOption option);
 
     // for all Log{...}() methods:
-    // Expected string encoding: ASCII, UTF8.
+    // Expected string encoding: ASCII or UTF8.
     // format           Format of log message, same rules as in standard 'printf' function.
     // arguments        Arguments interpreted by format, same rules as in standard 'printf' function.
     // function_name    Name of the function or method where Log{...}() is called.
@@ -166,22 +157,8 @@ inline Logger::~Logger() {
 
 inline void Logger::OpenFile(const std::string& file_name, bool is_append) {
     CloseFile();
-    if (fopen_s(&m_file, file_name.c_str(), is_append ? "at" : "wt") != 0 || !m_file) {
+    if (_wfopen_s(&m_file, ToUTF16(file_name).c_str(), is_append ? L"ab" : L"wb") != 0 || !m_file) {
         InnerFatalError("Logger::OpenFile: Can not open log file.");
-    }
-}
-
-inline void Logger::OpenFile_FileNameUTF8(const std::string& file_name, bool is_append) {
-    CloseFile();
-    if (_wfopen_s(&m_file, ToUTF16(file_name).c_str(), is_append ? L"at" : L"wt") != 0 || !m_file) {
-        InnerFatalError("Logger::OpenFile_FileNameUTF8: Can not open log file.");
-    }
-}
-
-inline void Logger::OpenFile_UTF8_WithBOM(const std::string& file_name, bool is_append) {
-    CloseFile();
-    if (_wfopen_s(&m_file, ToUTF16(file_name).c_str(), is_append ? L"at, ccs=UTF-8" : L"wt, ccs=UTF-8") != 0 || !m_file) {
-        InnerFatalError("Logger::OpenFile_UTF8_WithBOM: Can not open log file.");
     }
 }
 
@@ -231,11 +208,11 @@ inline void Logger::Disable(LoggerOption option) {
 
 inline void Logger::LogText(const std::string& text) {
     if (m_file) {
-        if (fwide(m_file, 0) > 0) {
-            fwprintf(m_file, L"%ls", ToUTF16(text).c_str());
-        } else {
-            fprintf(m_file, "%s", text.c_str());
+        const size_t count =  fwrite(text.c_str(), sizeof(char), text.length(), m_file);
+        if (count != text.length()) {
+            InnerFatalError("Logger::LogText: Failed write text to log file.");
         }
+
         fflush(m_file);
     }
     if (m_is_stdout) {
