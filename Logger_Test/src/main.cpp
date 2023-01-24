@@ -489,6 +489,6 @@ int main(int argc, char *argv[]) {
         TTK_ADD_TEST(TestLoggerOpenCloseFile, 0);
         TTK_ADD_TEST(TestLoggerOpenCloseStdOut, 0);
         TTK_ADD_TEST(TestLoggerLog, 0);
-        return TTK_Run();
+        return !TTK_Run();
     }
 }
