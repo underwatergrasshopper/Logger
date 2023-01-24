@@ -52,15 +52,31 @@ public:
     Logger();
     virtual ~Logger();
 
-    // Opens/Closes logging to file.
+    // Opens log file to be logged in.
+    // file_name            Name of log file. Encoding: ACII.
     void OpenFile(const std::string& file_name, bool is_append);
+
+    // Opens log file to be logged in. 
+    // file_name            Name of log file. Encoding: ASCII, UTF8.
+    void OpenFile_FileNameUTF8(const std::string& file_name, bool is_append);
+
+    // Opens log file to be logged in. Adds UTF8 BOM to log file.
+    // file_name            Name of log file. Encoding: ACII, UTF8.
+    void OpenFile_UTF8_WithBOM(const std::string& file_name, bool is_append);
+
+
+    // Closes log file.
     void CloseFile();
     bool IsFileOpened() const;
 
-    // Opens/Closes logging to standard output.
+    // Enables redirecting log messages to standard output.
     void OpenStdOut();
+
+    // Disables redirecting log messages to standard output.
     void CloseStdOut();
+
     bool IsStdOutOpened() const;
+
 
     void SetDoAtFatalError(DoAtFatalErrorFnP_T do_at_fatal_error);
 
@@ -70,6 +86,7 @@ public:
     void Disable(LoggerOption option);
 
     // for all Log{...}() methods:
+    // Expected string encoding: ASCII, UTF8.
     // format           Format of log message, same rules as in standard 'printf' function.
     // arguments        Arguments interpreted by format, same rules as in standard 'printf' function.
     // function_name    Name of the function or method where Log{...}() is called.
@@ -119,7 +136,7 @@ private:
     template <typename... Types>
     std::string GenerateMessage(const std::string& format, Types&&... arguments);
 
-    std::string ToUTF8(const std::wstring& text_utf16);
+    std::wstring ToUTF16(const std::string& text_utf8);
 
     FILE*                   m_file;
     bool                    m_is_stdout;
@@ -150,7 +167,21 @@ inline Logger::~Logger() {
 inline void Logger::OpenFile(const std::string& file_name, bool is_append) {
     CloseFile();
     if (fopen_s(&m_file, file_name.c_str(), is_append ? "at" : "wt") != 0 || !m_file) {
-        InnerFatalError("Logger: Can not open log file.");
+        InnerFatalError("Logger::OpenFile: Can not open log file.");
+    }
+}
+
+inline void Logger::OpenFile_FileNameUTF8(const std::string& file_name, bool is_append) {
+    CloseFile();
+    if (_wfopen_s(&m_file, ToUTF16(file_name).c_str(), is_append ? L"at" : L"wt") != 0 || !m_file) {
+        InnerFatalError("Logger::OpenFile_FileNameUTF8: Can not open log file.");
+    }
+}
+
+inline void Logger::OpenFile_UTF8_WithBOM(const std::string& file_name, bool is_append) {
+    CloseFile();
+    if (_wfopen_s(&m_file, ToUTF16(file_name).c_str(), is_append ? L"at, ccs=UTF-8" : L"wt, ccs=UTF-8") != 0 || !m_file) {
+        InnerFatalError("Logger::OpenFile_UTF8_WithBOM: Can not open log file.");
     }
 }
 
@@ -199,17 +230,17 @@ inline void Logger::Disable(LoggerOption option) {
 //------------------------------------------------------------------------------
 
 inline void Logger::LogText(const std::string& text) {
-    
     if (m_file) {
-        fprintf(m_file, "%s", text.c_str());
-        if (errno != 0) {
-            InnerFatalError("Logger: Can not open log file.");
+        if (fwide(m_file, 0) > 0) {
+            fwprintf(m_file, L"%ls", ToUTF16(text).c_str());
+        } else {
+            fprintf(m_file, "%s", text.c_str());
         }
         fflush(m_file);
     }
     if (m_is_stdout) {
         if (fwide(stdout, 0) > 0) {
-            wprintf(L"%hs", text.c_str());
+            wprintf(L"%ls", ToUTF16(text).c_str());
         } else {
             printf("%s", text.c_str());
         }
@@ -317,31 +348,31 @@ std::string Logger::GenerateMessage(const std::string& format, Types&&... argume
     return message;
 }
 
-inline std::string Logger::ToUTF8(const std::wstring& text_utf16) {
-    std::string text_utf8;
+inline std::wstring Logger::ToUTF16(const std::string& text_utf8) {
+    std::wstring text_utf16;
 
     enum { DEFAULT_SIZE = 4096 };
-    char stack_buffer[DEFAULT_SIZE] = {};
+    wchar_t stack_buffer[DEFAULT_SIZE] = {};
 
-    if (!text_utf16.empty()) {
-        int size = WideCharToMultiByte(CP_UTF8, 0, text_utf16.c_str(), -1, NULL, 0, NULL, NULL);
+    if (!text_utf8.empty()) {
+        int size = MultiByteToWideChar(CP_UTF8, 0, text_utf8.c_str(), -1, NULL, 0);
         if (size == 0) {
-            InnerFatalError("ToUTF8 Error: Can not convert a text from utf-16 to utf-8.");
+            InnerFatalError("Logger::ToUTF16 Error: Can not convert a text from utf-16 to utf-8.");
         }
 
-        char* buffer = (size > DEFAULT_SIZE) ? (new char[size]) : stack_buffer;
+        wchar_t* buffer = (size > DEFAULT_SIZE) ? (new wchar_t[size]) : stack_buffer;
 
-        size = WideCharToMultiByte(CP_UTF8, 0, text_utf16.c_str(), -1, buffer, size, NULL, NULL);
+        size = MultiByteToWideChar(CP_UTF8, 0, text_utf8.c_str(), -1, buffer, size);
         if (size == 0) {
-            InnerFatalError("ToUTF8 Error: Can not convert a text from utf-16 to utf-8.");
+            InnerFatalError("Logger::ToUTF16 Error: Can not convert a text from utf-16 to utf-8.");
         }
 
-        if (size > 0) text_utf8 = std::string(buffer, size - 1);
+        if (size > 1) text_utf16 = std::wstring(buffer, size - 1);
 
         if (buffer != stack_buffer) delete[] buffer;
     }
 
-    return text_utf8;
+    return text_utf16;
 }
 
 //------------------------------------------------------------------------------
