@@ -78,9 +78,9 @@ public:
 
     // for all Log{...}() methods:
     // Expected string encoding: ASCII or UTF8.
-    // format           Format of log message, same rules as in standard 'printf' function.
-    // arguments        Arguments interpreted by format, same rules as in standard 'printf' function.
-    // function_name    Name of the function or method where Log{...}() is called.
+    // format           The format of a log message, same rules as in standard 'printf' function.
+    // arguments        The arguments interpreted by format, same rules as in standard 'printf' function.
+    // function_name    The name of the function or method where Log{...}() is called.
 
     void LogText(const std::string& text);
 
@@ -135,8 +135,8 @@ private:
     bool                    m_is_log_time;
 };
 
-#define LOGGER_TRACE(logger, ...) logger.LogTrace(__PRETTY_FUNCTION__ , __VA_ARGS__)
-#define LOGGER_TRACK(logger) Logger::Tracker l_tracker(logger, __PRETTY_FUNCTION__)
+#define LOGGER_TRACE(logger, ...) logger.LogTrace(__FUNCTION__ , __VA_ARGS__)
+#define LOGGER_TRACK(logger) Logger::Tracker l_tracker(logger, __FUNCTION__)
 
 //------------------------------------------------------------------------------
 // Definition
