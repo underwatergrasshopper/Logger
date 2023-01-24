@@ -433,7 +433,6 @@ int main(int argc, char *argv[]) {
         return flags.find(flag) != flags.end(); 
     };
 
-
     if (IsFlag("FATAL_ERROR")) {
         Logger logger;
         logger.OpenFile(".\\log\\test\\FATAL_ERROR.txt", false);

@@ -72,7 +72,6 @@ public:
 
     bool IsStdOutOpened() const;
 
-
     void SetDoAtFatalError(DoAtFatalErrorFnP_T do_at_fatal_error);
 
     // Enables/Disables:
@@ -112,6 +111,7 @@ public:
     template <typename... Types>
     void LogError(const std::string& format, Types&&... arguments);
 
+    // Will exit from program after logging fatal error message.
     template <typename... Types>
     void LogFatalError(const std::string& format, Types&&... arguments);
 
