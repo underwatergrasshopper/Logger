@@ -210,7 +210,7 @@ inline void Logger::LogText(const std::string& text) {
     if (m_file) {
         const size_t count = fwrite(text.c_str(), sizeof(char), text.length(), m_file);
         if (count != text.length()) {
-            InnerFatalError("Logger::LogText: Failed write a text to the log file.");
+            InnerFatalError("Logger::LogText: Failed write the text to the log file.");
         }
 
         fflush(m_file);
