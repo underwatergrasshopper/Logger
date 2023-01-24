@@ -119,6 +119,8 @@ private:
     template <typename... Types>
     std::string GenerateMessage(const std::string& format, Types&&... arguments);
 
+    std::string ToUTF8(const std::wstring& text_utf16);
+
     FILE*                   m_file;
     bool                    m_is_stdout;
     DoAtFatalErrorFnP_T     m_do_at_fatal_error;
@@ -305,7 +307,7 @@ std::string Logger::GenerateMessage(const std::string& format, Types&&... argume
             InnerFatalError("[Inner Fatal Error][Logger::LogText]: Can not write to buffer.");
         }
 
-        message = std::string(buffer, second_count);
+        if (second_count > 0) message = std::string(buffer, second_count);
 
         delete[] buffer;
     } else {
@@ -313,6 +315,33 @@ std::string Logger::GenerateMessage(const std::string& format, Types&&... argume
     }
 
     return message;
+}
+
+inline std::string Logger::ToUTF8(const std::wstring& text_utf16) {
+    std::string text_utf8;
+
+    enum { DEFAULT_SIZE = 4096 };
+    char stack_buffer[DEFAULT_SIZE] = {};
+
+    if (!text_utf16.empty()) {
+        int size = WideCharToMultiByte(CP_UTF8, 0, text_utf16.c_str(), -1, NULL, 0, NULL, NULL);
+        if (size == 0) {
+            InnerFatalError("ToUTF8 Error: Can not convert a text from utf-16 to utf-8.");
+        }
+
+        char* buffer = (size > DEFAULT_SIZE) ? (new char[size]) : stack_buffer;
+
+        size = WideCharToMultiByte(CP_UTF8, 0, text_utf16.c_str(), -1, buffer, size, NULL, NULL);
+        if (size == 0) {
+            InnerFatalError("ToUTF8 Error: Can not convert a text from utf-16 to utf-8.");
+        }
+
+        if (size > 0) text_utf8 = std::string(buffer, size - 1);
+
+        if (buffer != stack_buffer) delete[] buffer;
+    }
+
+    return text_utf8;
 }
 
 //------------------------------------------------------------------------------
