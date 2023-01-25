@@ -25,7 +25,7 @@
 /**
 * @file Logger.h
 * @author underwatergrasshopper
-* @version 2.0.0a1
+* @version 2.0.0a2
 */
 
 #ifndef LOGGER_H_
@@ -134,6 +134,19 @@ public:
         const char* m_function_name;
     };
 private:
+    class UTF8_Guardian {
+    public:
+        UTF8_Guardian() {
+            char* current = setlocale(LC_ALL, ".UTF8");
+            backup = current ? std::string(current) : "";
+        }
+        virtual ~UTF8_Guardian() {
+            setlocale(LC_ALL, backup.c_str());
+        }
+    private:
+        std::string backup;
+    };
+
     template <typename... Types>
     void LogEntry(const std::string& category_name, const std::string& format, Types&&... arguments);
 
@@ -249,6 +262,8 @@ inline void Logger::LogText(const std::string& text) {
         fflush(m_file);
     }
     if (m_is_stdout) {
+        UTF8_Guardian utf8_guardian;
+
         if (fwide(stdout, 0) > 0) {
             wprintf(L"%ls", ToUTF16(text).c_str());
         } else {
@@ -294,11 +309,8 @@ void Logger::LogError(const std::string& format, Types&&... arguments) {
 
 template <typename... Types>
 void Logger::LogFatalError(const std::string& format, Types&&... arguments) {
-    if (m_is_log_time) LogTime();
-    LogText("[Fatal Error]: ");
     const std::string message = GenerateMessage(format, std::forward<Types>(arguments)...);
-    LogText(message);
-    LogText("\n");
+    LogEntry("Fatal Error", message);
 
     if (m_do_at_fatal_error) m_do_at_fatal_error(message.c_str()); 
     exit(EXIT_FAILURE);
@@ -390,8 +402,8 @@ inline std::wstring Logger::ToUTF16(const std::string& text_utf8) {
 
 //------------------------------------------------------------------------------
 
-inline Logger::Tracker::Tracker(Logger& logger, const char* funcName) : m_logger(logger), m_function_name(funcName) {
-    logger.LogTrace(funcName, "Enter.");
+inline Logger::Tracker::Tracker(Logger& logger, const char* function_name) : m_logger(logger), m_function_name(function_name) {
+    logger.LogTrace(function_name, "Enter.");
 }
 
 inline Logger::Tracker::~Tracker() {

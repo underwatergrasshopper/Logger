@@ -138,7 +138,7 @@ void TestLoggerOpenCloseStdOut() {
     // log text
     {
         system(".\\Logger_Test.exe LOG_STDOUT > .\\log\\test\\TestLoggerOpenCloseStdOut.txt");
-        TTK_ASSERT(LoadTextFromFile(".\\log\\test\\TestLoggerOpenCloseStdOut.txt") == "Another text.");
+        TTK_ASSERT(LoadTextFromFile(".\\log\\test\\TestLoggerOpenCloseStdOut.txt") == u8"Another text \u0444.");
     }
 }
 
@@ -487,7 +487,7 @@ int main(int argc, char *argv[]) {
         Logger logger;
         logger.LogText("Some text.");
         logger.OpenStdOut();
-        logger.LogText("Another text.");
+        logger.LogText(u8"Another text \u0444.");
         logger.CloseStdOut();
         logger.LogText("And another text.");
         return 0;
