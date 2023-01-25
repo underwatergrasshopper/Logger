@@ -35,6 +35,11 @@
 #include <stdio.h>
 #include <time.h>
 
+#define WIN32_LEAN_AND_MEAN 
+#include <windows.h>
+#undef WIN32_LEAN_AND_MEAN 
+
+#include <string>
 #include <utility>
 
 //------------------------------------------------------------------------------
@@ -56,12 +61,15 @@ public:
     Logger();
     virtual ~Logger();
 
-    // Opens log file to be logged in.
+    // Opens or creates a log file to be logged in.
     // file_name            Name of log file. Encoding: ACII or UTF8.
+    // is_append            If true then current content of file is keept. 
+    //                      If false then current content of file is removed.
     void OpenFile(const std::string& file_name, bool is_append);
 
     // Closes log file.
     void CloseFile();
+
     bool IsFileOpened() const;
 
     // Enables redirecting log messages to standard output.
@@ -293,6 +301,7 @@ void Logger::LogFatalError(const std::string& format, Types&&... arguments) {
     LogText("\n");
 
     if (m_do_at_fatal_error) m_do_at_fatal_error(message.c_str()); 
+    exit(EXIT_FAILURE);
 }
 
 template <typename... Types>

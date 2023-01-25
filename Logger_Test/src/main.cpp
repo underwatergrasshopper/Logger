@@ -437,12 +437,14 @@ int main(int argc, char *argv[]) {
         Logger logger;
         logger.OpenFile(".\\log\\test\\FATAL_ERROR.txt", false);
         logger.LogFatalError("%s %d.", "Some text", 5);
+        logger.LogText("This shouldn't get through.");
         return 0;
 
     } else if (IsFlag("FATAL_ERROR_STD_OUT")) {
         Logger logger;
         logger.OpenStdOut();
         logger.LogFatalError("%s %d.", "Some text", 5);
+        logger.LogText("This shouldn't get through.");
         return 0;
 
     } else if (IsFlag("FATAL_ERROR_WITH_FUNC")) {
@@ -453,18 +455,21 @@ int main(int argc, char *argv[]) {
             fflush(stdout);
         });
         logger.LogFatalError("%s %d.", "Some text", 5);
+        logger.LogText("This shouldn't get through.");
         return 0;
 
     } else if (IsFlag("FATAL_ERROR_ONE_ARG")) {
         Logger logger;
         logger.OpenFile(".\\log\\test\\FATAL_ERROR_ONE_ARG.txt", false);
         logger.LogFatalError("Some text.");
+        logger.LogText("This shouldn't get through.");
         return 0;
 
     } else if (IsFlag("FATAL_ERROR_STD_OUT_ONE_ARG")) {
         Logger logger;
         logger.OpenStdOut();
         logger.LogFatalError("Some text.");
+        logger.LogText("This shouldn't get through.");
         return 0;
 
     } else if (IsFlag("FATAL_ERROR_WITH_FUNC_ONE_ARG")) {
@@ -475,6 +480,7 @@ int main(int argc, char *argv[]) {
             fflush(stdout);
         });
         logger.LogFatalError("Some text.");
+        logger.LogText("This shouldn't get through.");
         return 0;
 
     } else if (IsFlag("LOG_STDOUT")) {
