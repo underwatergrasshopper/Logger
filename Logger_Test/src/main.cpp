@@ -451,7 +451,7 @@ int main(int argc, char *argv[]) {
         Logger logger;
         logger.OpenFile(".\\log\\test\\FATAL_ERROR_WITH_FUNC.txt", false);
         logger.SetDoAtFatalError([](const char* message) {
-            printf(message);
+            printf("%s", message);
             fflush(stdout);
         });
         logger.LogFatalError("%s %d.", "Some text", 5);
@@ -476,7 +476,7 @@ int main(int argc, char *argv[]) {
         Logger logger;
         logger.OpenFile(".\\log\\test\\FATAL_ERROR_WITH_FUNC_ONE_ARG.txt", false);
         logger.SetDoAtFatalError([](const char* message) {
-            printf(message);
+            printf("%s", message);
             fflush(stdout);
         });
         logger.LogFatalError("Some text.");

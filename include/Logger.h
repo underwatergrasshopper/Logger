@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <locale.h>
 
 #define WIN32_LEAN_AND_MEAN 
 #include <windows.h>
@@ -198,7 +199,7 @@ inline Logger::~Logger() {
 inline void Logger::OpenFile(const std::string& file_name, bool is_append) {
     CloseFile();
     if (_wfopen_s(&m_file, ToUTF16(file_name).c_str(), is_append ? L"ab" : L"wb") != 0 || !m_file) {
-        InnerFatalError("Logger::OpenFile: Can not open log file.");
+        InnerFatalError("[Inner Fatal Error][Logger::OpenFile]: Can not open log file.");
     }
 }
 
@@ -256,7 +257,7 @@ inline void Logger::LogText(const std::string& text) {
     if (m_file) {
         const size_t count = fwrite(text.c_str(), sizeof(char), text.length(), m_file);
         if (count != text.length()) {
-            InnerFatalError("Logger::LogText: Failed write the text to the log file.");
+            InnerFatalError("[Inner Fatal Error][Logger::LogText]: Failed write the text to the log file.");
         }
 
         fflush(m_file);
@@ -347,7 +348,17 @@ std::string Logger::GenerateMessage(const std::string& format, Types&&... argume
     enum { SIZE = 4096 };
     char stack_buffer[SIZE];
 
+    #ifndef _MSC_VER 
+        #pragma GCC diagnostic push
+        #pragma GCC diagnostic ignored "-Wformat-security"
+    #endif
+
     const int count = snprintf(stack_buffer, SIZE, format.c_str(), std::forward<Types>(arguments)...);
+
+    #ifndef _MSC_VER 
+        #pragma GCC diagnostic pop
+    #endif
+
     if (count < 0) {
         InnerFatalError("[Inner Fatal Error][Logger::LogText]: Wrong encoding.");
     }
@@ -355,7 +366,17 @@ std::string Logger::GenerateMessage(const std::string& format, Types&&... argume
     if (count >= SIZE) {
         char* buffer = new char[count];
 
+        #ifndef _MSC_VER 
+            #pragma GCC diagnostic push
+            #pragma GCC diagnostic ignored "-Wformat-security"
+        #endif
+
         const int second_count = snprintf(buffer, count, format.c_str(), std::forward<Types>(arguments)...);
+
+        #ifndef _MSC_VER 
+            #pragma GCC diagnostic pop
+        #endif
+
         if (count < 0) {
             InnerFatalError("[Inner Fatal Error][Logger::LogText]: Wrong encoding (at second try).");
         }
@@ -382,14 +403,14 @@ inline std::wstring Logger::ToUTF16(const std::string& text_utf8) {
     if (!text_utf8.empty()) {
         int size = MultiByteToWideChar(CP_UTF8, 0, text_utf8.c_str(), -1, NULL, 0);
         if (size == 0) {
-            InnerFatalError("Logger::ToUTF16 Error: Can not convert a text from utf-16 to utf-8.");
+            InnerFatalError("[Inner Fatal Error][Logger::ToUTF16]: Can not convert a text from utf-16 to utf-8.");
         }
 
         wchar_t* buffer = (size > DEFAULT_SIZE) ? (new wchar_t[size]) : stack_buffer;
 
         size = MultiByteToWideChar(CP_UTF8, 0, text_utf8.c_str(), -1, buffer, size);
         if (size == 0) {
-            InnerFatalError("Logger::ToUTF16 Error: Can not convert a text from utf-16 to utf-8.");
+            InnerFatalError("[Inner Fatal Error][Logger::ToUTF16]: Can not convert a text from utf-16 to utf-8.");
         }
 
         if (size > 1) text_utf16 = std::wstring(buffer, size - 1);
