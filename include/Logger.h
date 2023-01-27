@@ -25,7 +25,7 @@
 /**
 * @file Logger.h
 * @author underwatergrasshopper
-* @version 2.0.0a2
+* @version 2.0.1
 */
 
 #ifndef LOGGER_H_
@@ -153,7 +153,7 @@ private:
 
     void LogTime();
 
-    void InnerFatalError(const char* message);
+    void InnerFatalError(const char* message, const wchar_t* message_utf16);
 
     template <typename... Types>
     std::string GenerateMessage(const std::string& format, Types&&... arguments);
@@ -178,6 +178,8 @@ private:
 // Definition
 //------------------------------------------------------------------------------
 
+#define TOSTR_INNER_FATAL_ERROR(message) InnerFatalError(message, L##message)
+
 inline Logger::Logger() {
     m_file              = nullptr;
     m_is_stdout         = false;
@@ -199,7 +201,7 @@ inline Logger::~Logger() {
 inline void Logger::OpenFile(const std::string& file_name, bool is_append) {
     CloseFile();
     if (_wfopen_s(&m_file, ToUTF16(file_name).c_str(), is_append ? L"ab" : L"wb") != 0 || !m_file) {
-        InnerFatalError("[Inner Fatal Error][Logger::OpenFile]: Can not open log file.");
+        TOSTR_INNER_FATAL_ERROR("Error Logger::OpenFile: Can not open log file.");
     }
 }
 
@@ -257,7 +259,7 @@ inline void Logger::LogText(const std::string& text) {
     if (m_file) {
         const size_t count = fwrite(text.c_str(), sizeof(char), text.length(), m_file);
         if (count != text.length()) {
-            InnerFatalError("[Inner Fatal Error][Logger::LogText]: Failed write the text to the log file.");
+            TOSTR_INNER_FATAL_ERROR("Logger::LogText: Failed write the text to the log file.");
         }
 
         fflush(m_file);
@@ -335,8 +337,18 @@ inline void Logger::LogTime() {
     LogText("[%d/%02d/%02d %02d:%02d:%02d]", 1900 + ti.tm_year, 1 + ti.tm_mon, ti.tm_mday, ti.tm_hour, ti.tm_min, ti.tm_sec);
 }
 
-inline void Logger::InnerFatalError(const char* message) {
-    LogText(message);
+inline void Logger::InnerFatalError(const char* message, const wchar_t* message_utf16) {
+    {
+        UTF8_Guardian utf8_guardian;
+
+        if (fwide(stdout, 0) > 0) {
+            wprintf(L"%ls\n", message_utf16);
+        } else {
+            printf("%s\n", message);
+        }
+        fflush(stdout);
+    }
+
     if (m_do_at_fatal_error) m_do_at_fatal_error(message);
     exit(EXIT_FAILURE);
 }
@@ -360,7 +372,7 @@ std::string Logger::GenerateMessage(const std::string& format, Types&&... argume
     #endif
 
     if (count < 0) {
-        InnerFatalError("[Inner Fatal Error][Logger::LogText]: Wrong encoding.");
+        TOSTR_INNER_FATAL_ERROR("Error Logger::GenerateMessage: Wrong encoding.");
     }
 
     if (count >= SIZE) {
@@ -378,10 +390,10 @@ std::string Logger::GenerateMessage(const std::string& format, Types&&... argume
         #endif
 
         if (count < 0) {
-            InnerFatalError("[Inner Fatal Error][Logger::LogText]: Wrong encoding (at second try).");
+            TOSTR_INNER_FATAL_ERROR("Error Logger::GenerateMessage: Wrong encoding (at second try).");
         }
         if (second_count > count) {
-            InnerFatalError("[Inner Fatal Error][Logger::LogText]: Can not write to buffer.");
+            TOSTR_INNER_FATAL_ERROR("Error Logger::GenerateMessage: Can not write to buffer.");
         }
 
         if (second_count > 0) message = std::string(buffer, second_count);
@@ -403,14 +415,14 @@ inline std::wstring Logger::ToUTF16(const std::string& text_utf8) {
     if (!text_utf8.empty()) {
         int size = MultiByteToWideChar(CP_UTF8, 0, text_utf8.c_str(), -1, NULL, 0);
         if (size == 0) {
-            InnerFatalError("[Inner Fatal Error][Logger::ToUTF16]: Can not convert a text from utf-16 to utf-8.");
+            TOSTR_INNER_FATAL_ERROR("Error Logger::ToUTF16: Can not convert a text from utf-16 to utf-8.");
         }
 
         wchar_t* buffer = (size > DEFAULT_SIZE) ? (new wchar_t[size]) : stack_buffer;
 
         size = MultiByteToWideChar(CP_UTF8, 0, text_utf8.c_str(), -1, buffer, size);
         if (size == 0) {
-            InnerFatalError("[Inner Fatal Error][Logger::ToUTF16]: Can not convert a text from utf-16 to utf-8.");
+            TOSTR_INNER_FATAL_ERROR("Error Logger::ToUTF16: Can not convert a text from utf-16 to utf-8.");
         }
 
         if (size > 1) text_utf16 = std::wstring(buffer, size - 1);

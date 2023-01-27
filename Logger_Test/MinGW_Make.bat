@@ -20,7 +20,7 @@ setlocal EnableDelayedExpansion
 ::------------------------------------------------------------------------------
 :: User Section
 
-set TEST_PROJECT_NAME=ToStr_Test
+set TEST_PROJECT_NAME=Logger_Test
 
 ::------------------------------------------------------------------------------
 
